@@ -1,0 +1,135 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CEO
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(EMPLOYEE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Meeting {
+  id          String    @id @default(uuid())
+  firefliesId String    @unique
+  title       String
+  clientName  String?
+  meetingDate DateTime?
+  duration    Int?
+  transcript  String?
+  rawJson     Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  participants MeetingParticipant[]
+  analysis     MeetingAnalysis?
+  jobs         ProcessingJob[]
+
+  @@index([meetingDate])
+  @@index([clientName])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id        String  @id @default(uuid())
+  meetingId String
+  name      String
+  email     String?
+  role      String?
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@map("participants")
+}
+
+model MeetingAnalysis {
+  id                String    @id @default(uuid())
+  meetingId         String    @unique
+  overallTeamScore  Decimal   @db.Decimal(3, 1)
+  clientHealthScore Decimal   @db.Decimal(3, 1)
+  clientSentiment   Sentiment
+  riskLevel         RiskLevel
+  teamBreakdown     Json?
+  summary           Json?
+  minutesOfMeeting  Json?
+  actionItems       Json?
+  risks             Json?
+  recommendations   Json?
+  employeeScores    Json?
+  createdAt         DateTime  @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([riskLevel])
+  @@index([clientSentiment])
+  @@map("meeting_analysis")
+}
+
+model ProcessedMeeting {
+  id                 String    @id @default(uuid())
+  firefliesMeetingId String    @unique
+  status             String    @default("processing") // processing | completed | failed
+  processedAt        DateTime?
+  error              String?
+  createdAt          DateTime  @default(now())
+
+  @@index([status])
+  @@map("processed_meetings")
+}
+
+model ProcessingJob {
+  id        String    @id @default(uuid())
+  meetingId String?
+  queue     String
+  jobId     String?   @unique
+  status    JobStatus @default(PENDING)
+  attempts  Int       @default(0)
+  error     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([queue])
+  @@map("processing_jobs")
+}
