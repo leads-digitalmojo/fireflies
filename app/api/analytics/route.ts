@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
   const avgClientHealth =
     analyses.length > 0
-      ? analyses.reduce((sum, a) => sum + Number(a.clientHealthScore), 0) /
+      ? analyses.reduce((sum: number, a: any) => sum + Number(a.clientHealthScore), 0) /
         analyses.length
       : 0;
 
@@ -85,7 +85,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
   }
 
   // Pending action items count
-  const pendingActionItems = analyses.reduce((sum, a) => {
+  const pendingActionItems = analyses.reduce((sum: number, a: any) => {
     const items = a.actionItems as unknown[];
     return sum + (Array.isArray(items) ? items.length : 0);
   }, 0);
