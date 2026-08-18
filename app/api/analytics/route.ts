@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
   const avgTeamScore =
     analyses.length > 0
-      ? analyses.reduce((sum, a) => sum + Number(a.overallTeamScore), 0) /
+      ? analyses.reduce((sum: number, a: any) => sum + Number(a.overallTeamScore), 0) /
         analyses.length
       : 0;
 
