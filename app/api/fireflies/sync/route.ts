@@ -41,6 +41,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   const incomingSecret = request.headers.get("x-cron-secret");
 
+  logger.info("CRON_SECRET debug", { hasCronSecret: !!cronSecret, cronSecretLen: cronSecret?.length, hasIncoming: !!incomingSecret, incomingLen: incomingSecret?.length, match: incomingSecret === cronSecret });
   if (cronSecret && incomingSecret && incomingSecret === cronSecret) {
     logger.info("Cron sync triggered via secret header");
     try {
