@@ -28,7 +28,7 @@ export async function GET(
   // Employees can only view meetings they attended
   if (!canAccessAllMeetings(session.role)) {
     const isParticipant = meeting.participants.some(
-      (p) => p.email === session.email
+      (p: any) => p.email === session.email
     );
     if (!isParticipant) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
