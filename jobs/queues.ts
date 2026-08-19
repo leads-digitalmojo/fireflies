@@ -62,7 +62,7 @@ export async function schedulePolling() {
     "poll-fireflies",
     { limit: 20 },
     {
-      repeat: { pattern: "* * * * *" },
+      repeat: { pattern: "*/15 * * * *" }, // fallback for missed webhooks
       jobId: "fireflies-poll-recurring",
     }
   );
