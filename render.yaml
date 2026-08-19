@@ -1,0 +1,78 @@
+services:
+  - type: web
+    name: fireflies-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: fireflies-redis
+          property: connectionString
+      - key: FIREFLIES_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ZOHO_SMTP_HOST
+        value: smtp.zoho.com
+      - key: ZOHO_SMTP_PORT
+        value: "465"
+      - key: ZOHO_SMTP_USER
+        sync: false
+      - key: ZOHO_SMTP_APP_PASSWORD
+        sync: false
+      - key: CEO_EMAIL
+        sync: false
+      - key: HR_EMAIL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FIREFLIES_WEBHOOK_SECRET
+        sync: false
+      - key: APP_URL
+        value: https://fireflies-bbnf.onrender.com
+
+  - type: worker
+    name: fireflies-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: fireflies-redis
+          property: connectionString
+      - key: FIREFLIES_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ZOHO_SMTP_HOST
+        value: smtp.zoho.com
+      - key: ZOHO_SMTP_PORT
+        value: "465"
+      - key: ZOHO_SMTP_USER
+        sync: false
+      - key: ZOHO_SMTP_APP_PASSWORD
+        sync: false
+      - key: CEO_EMAIL
+        sync: false
+      - key: HR_EMAIL
+        sync: false
+      - key: APP_URL
+        value: https://fireflies-bbnf.onrender.com
+
+databases:
+  - name: fireflies-redis
+    type: redis
+    plan: free
+    maxmemoryPolicy: noeviction
