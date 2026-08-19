@@ -1,0 +1,36 @@
+# Fireflies polling fallback — runs every 15 minutes as a safety net.
+# The primary path is the Fireflies webhook (instant delivery on transcript ready).
+# This cron job catches any meetings the webhook missed — e.g. if the webhook
+# was temporarily unreachable or a transcript arrived during a Render cold start.
+
+name: Poll Fireflies (fallback)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:       # allows manual trigger from GitHub Actions tab
+
+jobs:
+  poll:
+    name: Sync recent meetings
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Call sync endpoint
+        run: |
+          HTTP_STATUS=$(curl --silent --output /tmp/response.json --write-out "%{http_code}" \
+            --max-time 300 \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://fireflies-bbnf.onrender.com/api/fireflies/sync)
+
+          echo "HTTP status: $HTTP_STATUS"
+          echo "Response:"
+          cat /tmp/response.json
+
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::Sync endpoint returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
