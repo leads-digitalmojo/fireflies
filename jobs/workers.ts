@@ -15,8 +15,10 @@ function step(n: number, message: string, extra?: Record<string, unknown>) {
   logger.info(`[${n}] ${message}`, extra);
 }
 
-// 30-minute stale threshold for in-flight jobs
-const STALE_MS = 30 * 60 * 1000;
+// 4-hour stale threshold — Claude on a large transcript takes up to 2 min,
+// and with concurrency:1 a queue of 20 meetings can take 40+ min total.
+// 30 min was too short and caused premature re-queuing + rate limit burn.
+const STALE_MS = 4 * 60 * 60 * 1000;
 // 1-hour wait before retrying a failed meeting
 const RETRY_AFTER_MS = 60 * 60 * 1000;
 
@@ -111,18 +113,30 @@ const transcriptWorker = new Worker(
   async (job: Job<{ firefliesId: string }>) => {
     const { firefliesId } = job.data;
 
+    // Check if transcript is already cached in DB — avoids burning a
+    // Fireflies API credit on re-fetching something we already have.
+    const cached = await prisma.meeting.findUnique({
+      where: { firefliesId },
+      select: { id: true, transcript: true, title: true },
+    });
+
     let meetingId: string;
-    try {
-      meetingId = await syncMeeting(firefliesId);
-    } catch (err) {
-      const e = err as Error;
-      logger.error("Transcript fetch failed", {
-        firefliesId,
-        message: e.message,
-        stack: e.stack,
-      });
-      await markFailed(firefliesId, e.message ?? String(err));
-      throw err;
+    if (cached?.transcript && cached.transcript.length > 200) {
+      meetingId = cached.id;
+      step(3, `Using cached transcript: "${cached.title}"`, { firefliesId, meetingId, cached: true });
+    } else {
+      try {
+        meetingId = await syncMeeting(firefliesId);
+      } catch (err) {
+        const e = err as Error;
+        logger.error("Transcript fetch failed", {
+          firefliesId,
+          message: e.message,
+          stack: e.stack,
+        });
+        await markFailed(firefliesId, e.message ?? String(err));
+        throw err;
+      }
     }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
@@ -229,7 +243,14 @@ const analysisWorker = new Worker(
 
     return { meetingId };
   },
-  { connection: redis, concurrency: 1 }
+  {
+    connection: redis,
+    concurrency: 1,
+    // Claude on a large transcript can take 2+ minutes. Default lockDuration
+    // is 30s — the job was being marked "stalled" mid-call and retried,
+    // causing duplicate Claude calls and neither attempt completing cleanly.
+    lockDuration: 300000, // 5 minutes
+  }
 );
 
 // ── [7][8] Email Worker — send report + mark processed ────────────────────────
