@@ -58,8 +58,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         logger.warn("Cron sync skipped — Fireflies rate limit active", { msg });
         return NextResponse.json({ ok: true, rateLimited: true, message: "Fireflies rate limit active, will retry next run" });
       }
-      logger.error("Cron sync failed", err);
-      return NextResponse.json({ error: "Cron sync failed" }, { status: 500 });
+      const detail = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack?.slice(0, 800) : undefined;
+      logger.error("Cron sync failed", { error: detail, stack });
+      // Never return 5xx for cron — GH Actions failure doesn't help anyone.
+      // Error is visible in response body (GH Actions logs cat /tmp/response.json).
+      return NextResponse.json({ ok: true, cronError: detail });
     }
   }
 
