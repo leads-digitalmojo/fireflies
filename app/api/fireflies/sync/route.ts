@@ -52,6 +52,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logger.info("Cron sync complete", { processed, skipped, errors, total: results.length });
       return NextResponse.json({ ok: true, processed, skipped, errors, results });
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Fireflies daily rate limit — expected, not an infrastructure error
+      if (msg.includes("too_many_requests") || msg.includes("Too many requests")) {
+        logger.warn("Cron sync skipped — Fireflies rate limit active", { msg });
+        return NextResponse.json({ ok: true, rateLimited: true, message: "Fireflies rate limit active, will retry next run" });
+      }
       logger.error("Cron sync failed", err);
       return NextResponse.json({ error: "Cron sync failed" }, { status: 500 });
     }
