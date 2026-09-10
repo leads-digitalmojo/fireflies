@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Fireflies daily rate limit — expected, not an infrastructure error
-      if (msg.includes("too_many_requests") || msg.includes("Too many requests")) {
+      if (msg.includes("too_many_requests") || msg.toLowerCase().includes("too many requests") || msg.includes("429")) {
         logger.warn("Cron sync skipped — Fireflies rate limit active", { msg });
         return NextResponse.json({ ok: true, rateLimited: true, message: "Fireflies rate limit active, will retry next run" });
       }
