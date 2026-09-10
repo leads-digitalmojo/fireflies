@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/fireflies/webhook"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/fireflies/webhook", "/api/fireflies/sync"];
 
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
